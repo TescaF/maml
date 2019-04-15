@@ -30,7 +30,7 @@ import numpy as np
 import pickle
 import random
 import tensorflow as tf
-
+import pdb
 from data_generator import DataGenerator
 from maml import MAML
 from tensorflow.python.platform import flags
@@ -68,6 +68,9 @@ flags.DEFINE_integer('test_iter', -1, 'iteration to load model (-1 for latest mo
 flags.DEFINE_bool('test_set', False, 'Set to true to test on the the test set, False for the validation set.')
 flags.DEFINE_integer('train_update_batch_size', -1, 'number of examples used for gradient update during training (use if you want to test with a different number).')
 flags.DEFINE_float('train_update_lr', -1, 'value of inner gradient step step during training. (use if you want to test with a different value)') # 0.1 for omniglot
+
+## AL options
+flags.DEFINE_string('al_method', 'none', 'method to use for active learning')
 
 def train(model, saver, sess, exp_string, data_generator, resume_itr=0):
     SUMMARY_INTERVAL = 100
@@ -187,12 +190,14 @@ def test(model, saver, sess, exp_string, data_generator, test_num_updates=None):
             labela = batch_y[:, :num_classes*FLAGS.update_batch_size, :]
             labelb = batch_y[:,num_classes*FLAGS.update_batch_size:, :]
 
+            ## run evaluation but don't update model parameters (meta_lr = 0)
             feed_dict = {model.inputa: inputa, model.inputb: inputb,  model.labela: labela, model.labelb: labelb, model.meta_lr: 0.0}
 
         if model.classification:
             result = sess.run([model.metaval_total_accuracy1] + model.metaval_total_accuracies2, feed_dict)
         else:  # this is for sinusoid
             result = sess.run([model.total_loss1] +  model.total_losses2, feed_dict)
+            #pdb.set_trace()
         metaval_accuracies.append(result)
 
     metaval_accuracies = np.array(metaval_accuracies)
@@ -200,6 +205,7 @@ def test(model, saver, sess, exp_string, data_generator, test_num_updates=None):
     stds = np.std(metaval_accuracies, 0)
     ci95 = 1.96*stds/np.sqrt(NUM_TEST_POINTS)
 
+    #pdb.set_trace()
     print('Mean validation accuracy/loss, stddev, and confidence intervals')
     print((means, stds, ci95))
 
